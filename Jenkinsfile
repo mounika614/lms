@@ -1,31 +1,50 @@
 pipeline {
     agent any
-    environment {
-        // More detail: 
-        // https://jenkins.io/doc/book/pipeline/jenkinsfile/#usernames-and-passwords
-        NEXUS_CRED = credentials('nexus')
-   }
-
+    parameters {
+        string(name: 'DOCKERHUB_CREDENTIALS_ID',
+               defaultValue: 'dockerhub',  // Use the ID you provided
+               description: 'ID of the Docker Hub credentials in Jenkins')
+        string(name: 'DOCKERHUB_USERNAME',
+               defaultValue: 'mounika2608',
+               description: 'Your Docker Hub username')
+        string(name: 'IMAGE_NAME',
+               defaultValue: 'mounika2608/lms-frontend',
+               description: 'Name of the Docker image in Docker Hub')
+    }
     stages {
-        stage('Build') {
+        stage('Version') {
             steps {
-                echo 'Building..'
-                sh 'cd webapp && npm install && npm run build'
+                script {
+                    def packageJson = readJSON file: 'webapp/package.json'
+                    env.VERSION = packageJson.version
+                    echo "Version from package.json: ${env.VERSION}"
+                }
             }
         }
-        stage('Test') {
+        stage('Build and Push Docker Image') {
             steps {
-                echo 'Testing..'
-                sh 'cd webapp && sudo docker container run --rm -e SONAR_HOST_URL="http://20.172.187.108:9000" -e SONAR_LOGIN="sqp_cae41e62e13793ff17d58483fb6fb82602fe2b48" -v ".:/usr/src" sonarsource/sonar-scanner-cli -Dsonar.projectKey=lms'
+                script {
+                    dockerLogin(credentialsId: params.DOCKERHUB_CREDENTIALS_ID,
+                                username: params.DOCKERHUB_USERNAME)
+                    def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", dir: 'webapp')
+                    // Tag the image for Docker Hub
+                    dockerImage.push("${env.VERSION}")
+                    dockerImage.push('latest')
+                }
             }
         }
-        stage('Release') {
+        stage('Deploy') {
             steps {
-                echo 'Release Nexus'
-                sh 'rm -rf *.zip'
-                sh 'cd webapp && zip dist-${BUILD_NUMBER}.zip -r dist'
-                sh 'cd webapp && curl -v -u $Username:$Password --upload-file dist-${BUILD_NUMBER}.zip http://20.172.187.108:8081/repository/lms/'
+                script {
+                    echo "Deploying image ${params.IMAGE_NAME}:${env.VERSION} using port mapping"
+                    sh "docker run -dt -p 80:80 ${params.IMAGE_NAME}:${env.VERSION}"
+                }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs()
         }
     }
 }
