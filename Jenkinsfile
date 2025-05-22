@@ -28,7 +28,8 @@ pipeline {
             steps {
                 script {
                     // Build the Docker image
-                    def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", dir: 'webapp')
+                    // Corrected line: First arg is image tag, second is build context directory
+                    def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", 'webapp')
                     // Use docker.withRegistry for pushing
                     docker.withRegistry("${params.DOCKER_REGISTRY}", params.DOCKERHUB_CREDENTIALS_ID) {
                         dockerImage.push("${env.VERSION}")
