@@ -10,6 +10,9 @@ pipeline {
         string(name: 'IMAGE_NAME',
                defaultValue: 'mounika2608/lms-frontend',
                description: 'Name of the Docker image in Docker Hub')
+        string(name: 'DOCKER_REGISTRY', // New parameter for Docker registry URL
+               defaultValue: 'docker.io', // Default for Docker Hub
+               description: 'URL of your Docker registry (e.g., docker.io)')
     }
     stages {
         stage('Version') {
@@ -24,12 +27,13 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    dockerLogin(credentialsId: params.DOCKERHUB_CREDENTIALS_ID,
-                                username: params.DOCKERHUB_USERNAME)
+                    // Build the Docker image
                     def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", dir: 'webapp')
-                    // Tag the image for Docker Hub
-                    dockerImage.push("${env.VERSION}")
-                    dockerImage.push('latest')
+                    // Use docker.withRegistry for pushing
+                    docker.withRegistry("${params.DOCKER_REGISTRY}", params.DOCKERHUB_CREDENTIALS_ID) {
+                        dockerImage.push("${env.VERSION}")
+                        dockerImage.push('latest')
+                    }
                 }
             }
         }
@@ -37,7 +41,10 @@ pipeline {
             steps {
                 script {
                     echo "Deploying image ${params.IMAGE_NAME}:${env.VERSION} using port mapping"
-                    sh "docker run -dt -p 80:80 ${params.IMAGE_NAME}:${env.VERSION}"
+                    // First, stop and remove any existing container with the same name if you intend to restart it.
+                    // This prevents "docker run" from failing if the container already exists.
+                    sh "docker ps -a --filter 'name=lms-frontend-container' --format '{{.ID}}' | xargs -r docker rm -f"
+                    sh "docker run -dt -p 80:80 --name lms-frontend-container ${params.IMAGE_NAME}:${env.VERSION}"
                 }
             }
         }
