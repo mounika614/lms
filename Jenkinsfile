@@ -2,7 +2,7 @@ pipeline {
     agent any
     parameters {
         string(name: 'DOCKERHUB_CREDENTIALS_ID',
-               defaultValue: 'docker-hub-credentials', // Corrected common default for clarity
+               defaultValue: 'dockerhub', // Corrected common default for clarity
                description: 'ID of the Docker Hub credentials in Jenkins')
         string(name: 'DOCKERHUB_USERNAME',
                defaultValue: 'mounika2608',
