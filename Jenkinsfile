@@ -2,17 +2,17 @@ pipeline {
     agent any
     parameters {
         string(name: 'DOCKERHUB_CREDENTIALS_ID',
-               defaultValue: 'dockerhub',  // Use the ID you provided
+               defaultValue: 'docker-hub-credentials', // Corrected common default for clarity
                description: 'ID of the Docker Hub credentials in Jenkins')
         string(name: 'DOCKERHUB_USERNAME',
                defaultValue: 'mounika2608',
                description: 'Your Docker Hub username')
         string(name: 'IMAGE_NAME',
                defaultValue: 'mounika2608/lms-frontend',
-               description: 'Name of the Docker image in Docker Hub')
-        string(name: 'DOCKER_REGISTRY', // New parameter for Docker registry URL
-               defaultValue: 'docker.io', // Default for Docker Hub
-               description: 'URL of your Docker registry (e.g., docker.io)')
+               description: 'Name of the Docker image in Docker Hub (e.g., mounika2608/lms-frontend)')
+        string(name: 'DOCKER_REGISTRY', // Parameter for Docker registry URL
+               defaultValue: 'https://registry.hub.docker.com', // **CORRECTED DEFAULT**
+               description: 'URL of your Docker registry (e.g., https://registry.hub.docker.com)')
     }
     stages {
         stage('Version') {
@@ -28,12 +28,11 @@ pipeline {
             steps {
                 script {
                     // Build the Docker image
-                    // Corrected line: First arg is image tag, second is build context directory
                     def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", 'webapp')
-                    // Use docker.withRegistry for pushing
+                    // Use docker.withRegistry for pushing with the full URL
                     docker.withRegistry("${params.DOCKER_REGISTRY}", params.DOCKERHUB_CREDENTIALS_ID) {
-                        dockerImage.push("${env.VERSION}")
-                        dockerImage.push('latest')
+                        dockerImage.push("${env.VERSION}") // Push with the specific version tag
+                        dockerImage.push('latest')          // Also push with the 'latest' tag
                     }
                 }
             }
