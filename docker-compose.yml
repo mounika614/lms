@@ -23,7 +23,7 @@ services:
       - PORT=8080
       - DATABASE_URL=postgresql://postgres:Qwerty@1@db:5432/mydb
     ports:
-      - "8080:8081"
+      - "8081:8081"
     depends_on: # Removed 'condition: service_healthy'
       - db
 
