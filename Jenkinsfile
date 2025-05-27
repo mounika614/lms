@@ -100,7 +100,7 @@ pipeline {
                     // Execute Prisma migrate deploy inside a temporary container
                     // Make sure your backend image contains Prisma and your schema
                     // The network name 'lms_default' is derived from your repo name 'lms'
-                    sh "docker run --rm --network lms_default -e DATABASE_URL=postgresql://postgres:itjustworks@db:5432/mydb ${params.DOCKERHUB_USERNAME}/lms-backend:${env.BACKEND_VERSION} npx prisma migrate deploy"
+                    sh "docker run --rm --network lms_default -e DATABASE_URL=postgresql://postgres:Qwerty@1@db:5432/mydb ${params.DOCKERHUB_USERNAME}/lms-backend:${env.BACKEND_VERSION} npx prisma migrate deploy"
                     echo "Prisma migrations completed."
 
                     // Now, bring up the entire application stack using Docker Compose
