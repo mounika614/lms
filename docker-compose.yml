@@ -12,6 +12,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: mounika2608/lms-backend:latest
@@ -25,8 +30,9 @@ services:
     ports:
       - "8081:8081"
     depends_on: # Removed 'condition: service_healthy'
-      - db
-
+      db :
+         condition: service_healthy
+      
   frontend:
     image: mounika2608/lms-frontend:latest
     build:
