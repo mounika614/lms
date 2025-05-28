@@ -1,51 +1,50 @@
 pipeline {
     agent any
+    parameters {
+        string(name: 'DOCKERHUB_CREDENTIALS_ID',
+               defaultValue: 'dockerhub',  // Use the ID you provided
+               description: 'ID of the Docker Hub credentials in Jenkins')
+        string(name: 'DOCKERHUB_USERNAME',
+               defaultValue: 'mounika2608',
+               description: 'Your Docker Hub username')
+        string(name: 'IMAGE_NAME',
+               defaultValue: 'mounika2608/lms-frontend',
+               description: 'Name of the Docker image in Docker Hub')
+    }
     stages {
-        stage('Code Analysis') {
-            steps {
-               echo 'Sonar Analysis Started'
-               sh 'cd webapp && sudo docker run --rm -e SONAR_HOST_URL="http://13.40.25.174:9000" -v ".:/usr/src" -e SONAR_TOKEN="sqp_e4a1aace6c5c587f54529c25626c9beb526e5bdb" sonarsource/sonar-scanner-cli -Dsonar.projectKey=lms'
-               echo 'Sonar Analysis Completed'
-            }
-        }
-        stage('LMS Build') {
-            steps {
-               echo 'LMS Build Started'
-               sh 'cd webapp && npm install && npm run build'
-               echo 'LMS Build Completed'
-            }
-        }
-        stage('Release LMS') {
+        stage('Version') {
             steps {
                 script {
                     def packageJson = readJSON file: 'webapp/package.json'
-                    def packageJSONVersion = packageJson.version
-                    echo "${packageJSONVersion}"
-                    sh "zip webapp/lms-${packageJSONVersion}.zip -r webapp/dist"
-                    sh "curl -v -u admin:lms12345 --upload-file webapp/lms-${packageJSONVersion}.zip http://13.40.25.174:8081/repository/lms/"
+                    env.VERSION = packageJson.version
+                    echo "Version from package.json: ${env.VERSION}"
                 }
             }
         }
-        stage('Deploy LMS - dev') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    def packageJson = readJSON file: 'webapp/package.json'
-                    def packageJSONVersion = packageJson.version
-                    echo "${packageJSONVersion}"
-                    sh "curl -u admin:lms12345 -X GET \'http://13.40.25.174:8081/repository/lms/lms-${packageJSONVersion}.zip\' --output lms-'${packageJSONVersion}'.zip"
-                    sh 'sudo rm -rf /var/www/html/*'
-                    sh "sudo unzip -o lms-'${packageJSONVersion}'.zip"
-                    sh "sudo cp -r webapp/dist/* /var/www/html"
+                    dockerLogin(credentialsId: params.DOCKERHUB_CREDENTIALS_ID,
+                                username: params.DOCKERHUB_USERNAME)
+                    def dockerImage = docker.build("${params.IMAGE_NAME}:${env.VERSION}", dir: 'webapp')
+                    // Tag the image for Docker Hub
+                    dockerImage.push("${env.VERSION}")
+                    dockerImage.push('latest')
                 }
             }
         }
-        stage('Clean Up Workspace') {
+        stage('Deploy') {
             steps {
-                    echo 'Cleaning Work Space'
-                    // Install Cleanup Workspace plugin to make below command work
-                    cleanWs()
+                script {
+                    echo "Deploying image ${params.IMAGE_NAME}:${env.VERSION} using port mapping"
+                    sh "docker run -dt -p 80:80 ${params.IMAGE_NAME}:${env.VERSION}"
+                }
             }
         }
-
+    }
+    post {
+        always {
+            cleanWs()
+        }
     }
 }
