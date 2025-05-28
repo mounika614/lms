@@ -15,6 +15,7 @@ COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
+RUN npx prisma db push
 # REMOVE THE NEXT LINE: RUN npx prisma db push
 
 # Build the TypeScript application
