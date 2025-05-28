@@ -88,19 +88,16 @@ pipeline {
                     echo "Stopping and removing any existing Docker Compose stack..."
                     // Adding || true to prevent pipeline failure if no containers exist to stop
                     sh "docker-compose -f docker-compose.yml down --remove-orphans || true"
-                    // Start only the database service to run migrations
-                    echo "Starting database service for migrations..."
+                    // Start only the database service (no migration step here now)
+                    echo "Starting database service..." // Changed message
                     sh "docker-compose -f docker-compose.yml up -d db"
                     // Give the database a moment to fully initialize (important without healthcheck)
                     echo "Waiting 10 seconds for PostgreSQL to initialize..."
                     sh "sleep 10"
-                    // Run Prisma Migrations
-                    echo "Running Prisma migrations..."
-                    // Execute Prisma migrate deploy inside a temporary container
-                    // Make sure your backend image contains Prisma and your schema
-                    // The network name 'lms_default' is derived from your repo name 'lms'
-                    sh "docker run --rm --network lms_default -e DATABASE_URL=postgresql://postgres:Qwerty@1@db:5432/mydb ${params.DOCKERHUB_USERNAME}/lms-backend:${env.BACKEND_VERSION} npx prisma migrate deploy"
-                    echo "Prisma migrations completed."
+                    // Removed: Running Prisma migrations...
+                    // Removed: sh "docker run --rm --network lms_default -e DATABASE_URL=..."
+                    // Removed: echo "Prisma migrations completed."
+
                     // === START DEBUGGING ADDITION ===
                     echo "Dumping docker-compose.yml content for verification:"
                     sh 'cat docker-compose.yml'
